@@ -174,7 +174,6 @@ node default {
     password_hash => postgresql_password($arcgis_db_user, $arcgis_db_password),
   }
 
-
   # Add hba rule to allow application access to the arcgis role
   postgresql::server::pg_hba_rule { 'allow arcgis to access app database':
     description => "Open up postgresql for arcgis access",
@@ -184,4 +183,46 @@ node default {
     address => '0.0.0.0/24',
     auth_method => 'md5',
   }
+
+  # Create static content folder for apache
+  file { '/var/www/html/static' :
+    ensure => directory,
+    owner  => 'django',
+    group => 'django',
+    mode => '0755',
+    require => User['django'],
+  }
+
+  # Add apache virtual host
+  file { '/etc/apache2/sites-available/000-default.conf' :
+    ensure => present,
+    owner => 'root',
+    group => 'root',
+    mode => '0644',
+    require => Package['apache2'],
+    content => 'WSGIScriptAlias / /home/django/mn_climate/mn_climate/wsgi.py
+WSGIPythonPath /home/django/mn_climate:/home/django/venv/lib/python2.7/site-packages
+
+<VirtualHost *:80>
+  ServerAdmin webmaster@localhost
+  DocumentRoot /var/www/html
+
+  ErrorLog ${APACHE_LOG_DIR}/error.log
+  CustomLog ${APACHE_LOG_DIR}/access.log combined
+
+  # Django WSGI connector
+  <Directory /home/django/mn_climate/mn_climate>
+    <Files wsgi.py>
+      Require all granted
+    </Files>
+  </Directory>
+
+  # Application static files
+  Alias /static/ /var/www/html/static/
+  <Directory /var/www/html/static>
+    Require all granted
+  </Directory>
+
+</VirtualHost>',
+  } 
 }
