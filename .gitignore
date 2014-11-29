@@ -1,0 +1,5 @@
+Puppetfile.lock
+.tmp/
+.librarian/
+modules/*
+!modules/README.txt
