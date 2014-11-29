@@ -1,5 +1,13 @@
 node default { 
 
+  # Database credentials
+  $django_db_user = 'django'
+  $django_db_password = 'changeme'
+
+  # ArcGIS Database user (read-only)
+  $arcgis_db_user = 'arcgis'
+  $arcgis_db_password = 'changeme'
+
   # System packages
   package { [
     'git',
@@ -145,10 +153,7 @@ node default {
   }
 
   # Create the django database and user
-  class { 'postgresql::server': 
-    postgres_password => 'changeme',
-  }
-
+  class { 'postgresql::server': }
   class { 'postgresql::server::postgis': }
 
   # Add the postgis extensions
@@ -158,8 +163,25 @@ node default {
     require => [ Class['Postgresql::Server::Postgis'], Postgresql::Server::Db['mn_climate'] ],
   }
 
+  # Create mn_climate database
   postgresql::server::db { 'mn_climate' :
-    user => 'django',
-    password => postgresql_password('django', 'changeme'),
+    user => $django_db_user,
+    password => postgresql_password($django_db_user, $django_db_password),
+  }
+
+  # Add arcgis role (for read-only access)
+  postgresql::server::role { $arcgis_db_user :
+    password_hash => postgresql_password($arcgis_db_user, $arcgis_db_password),
+  }
+
+
+  # Add hba rule to allow application access to the arcgis role
+  postgresql::server::pg_hba_rule { 'allow arcgis to access app database':
+    description => "Open up postgresql for arcgis access",
+    type => 'host',
+    database => 'mn_climate',
+    user => $arcgis_db_user,
+    address => '0.0.0.0/24',
+    auth_method => 'md5',
   }
 }
