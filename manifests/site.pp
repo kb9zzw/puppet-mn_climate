@@ -204,6 +204,12 @@ node default {
     require => User['django'],
   }
 
+  # Enable mod_headers
+  file { '/etc/apache2/mods-enabled/headers.load':
+    ensure => link,
+    target => '/etc/apache2/mods-available/headers.load',
+  }
+
   # Add apache virtual host
   file { '/etc/apache2/sites-available/000-default.conf' :
     ensure  => present,
@@ -233,6 +239,11 @@ WSGIPythonPath /home/django/mn_climate:/home/django/venv/lib/python2.7/site-pack
   <Directory /var/www/html/static>
     Require all granted
   </Directory>
+
+  # CORS headers
+  <IfModule mod_headers.c>
+    Header set Access-Control-Allow-Origin: "*"
+  </IfModule>
 
 </VirtualHost>',
   } 
